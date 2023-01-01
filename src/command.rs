@@ -1,0 +1,41 @@
+// https://marlinfw.org/meta/gcode/
+
+pub enum Gcode {
+    /// G0(E, F, X, Y, Z): Performs a linear move, conventionally used for non-extruding move.
+    G0(f32, f32, f32, f32, f32),
+    /// G1(E, F, X, Y, Z): Performs a linear move, conventionally used for extruding move.
+    G1(f32, f32, f32, f32, f32),
+    /// G28: Auto-home
+    G28,
+    /// G90: Set absolute positioning mode
+    G90,
+    /// G91: Set relative positioning mode
+    G91,
+    /// M17(E, X, Y, Z): Enable steppers
+    M17(bool, bool, bool, bool),
+    /// M18(E, S, X, Y, Z): Disable steppers, after S idle timeout
+    M18(bool, i32, bool, bool, bool),
+    /// M82: Set E absolute positioning
+    M82,
+    /// M83: Set E relative positioning
+    M83,
+    /// M104(temp): Set hotend temperature, but don't wait for it to be reached
+    M104(i32),
+    /// M106(0-255): Set fan duty cycle (out of 255)
+    M106(u8),
+    /// M107: Fan off
+    M107,
+    /// M109(temp): Set hotend temperature and only continue when the target temp is reached
+    M109(i32),
+    /// M112: Emergency stop
+    M112,
+    /// M140(temp): Set bed temperature, but don't wait for it to be reached
+    M140(i32),
+    /// M190(temp): Set bed temperature and only continue when the target temp is reached
+    M190(i32),
+}
+
+pub(crate) struct Command {
+    pub(crate) gcode: Gcode,
+    pub(crate) comment: String,
+}
