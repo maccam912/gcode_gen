@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use crate::command::{Command, Gcode};
 
 pub struct State {
@@ -41,10 +43,35 @@ impl State {
     }
 }
 
+pub struct Profile {
+    /// Diameter of nozzle in mm
+    nozzle_diameter: f32,
+    /// Diameter of filament in mm
+    filament_diameter: f32,
+}
+
+impl Profile {
+    fn new() -> Profile {
+        Profile {
+            nozzle_diameter: 0.4,
+            filament_diameter: 1.75,
+        }
+    }
+
+    fn extruder_ratio(&self) -> f32 {
+        let filament_radius = self.filament_diameter / 2.0;
+        let area_of_filament = PI * filament_radius * filament_radius;
+        let nozzle_radius = self.nozzle_diameter / 2.0;
+        let area_of_nozzle = PI * nozzle_radius * nozzle_radius;
+        area_of_nozzle / area_of_filament
+    }
+}
+
 pub struct Printer {
     state: State,
     commands: Vec<Command>,
     danger_mode: bool,
+    profile: Profile,
 }
 
 impl Default for Printer {
@@ -60,6 +87,7 @@ impl Printer {
             state: State::new(),
             commands: vec![],
             danger_mode: false,
+            profile: Profile::new(),
         }
     }
 
@@ -136,5 +164,58 @@ impl Printer {
         self.state.x = 0.0;
         self.state.y = 0.0;
         self.state.z = 0.0;
+    }
+
+    pub fn extrude_line_absolute(&mut self, dest_x: f32, dest_y: f32) {
+        let dist =
+            ((self.state.x - dest_x).abs().powi(2) + (self.state.y - dest_y).abs().powi(2)).sqrt();
+        let extrude_amount = dist * self.profile.extruder_ratio();
+        self.commands.push(Command {
+            gcode: Gcode::G1(
+                self.state.e + extrude_amount,
+                self.state.f,
+                dest_x,
+                dest_y,
+                self.state.z,
+            ),
+            comment: "Extrude line from current location to destination x and y".into(),
+        });
+        self.state.x = dest_x;
+        self.state.y = dest_y;
+        self.state.e += extrude_amount;
+    }
+
+    pub fn commands_str(&self) -> String {
+        let mut s = String::new();
+
+        for c in &self.commands {
+            s.push_str(&c.to_string());
+        }
+        s
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::state::Profile;
+
+    use super::Printer;
+
+    #[test]
+    fn extruder_ratio() {
+        let profile = Profile {
+            filament_diameter: 1.75,
+            nozzle_diameter: 0.4,
+        };
+        debug_assert!(profile.extruder_ratio() < 0.053);
+        debug_assert!(profile.extruder_ratio() > 0.052);
+    }
+
+    #[test]
+    fn commands_exported() {
+        let mut printer = Printer::new();
+        printer.autohome();
+        let str = printer.commands_str();
+        debug_assert_eq!(str, "G28 ; auto-home".to_string());
     }
 }
