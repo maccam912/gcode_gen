@@ -45,19 +45,34 @@ impl State {
 
 pub struct Profile {
     /// Diameter of nozzle in mm
-    nozzle_diameter: f32,
+    pub nozzle_diameter: f32,
     /// Diameter of filament in mm
-    filament_diameter: f32,
+    pub filament_diameter: f32,
     /// Step height for each layer
-    layer_height: f32,
+    pub layer_height: f32,
+    /// Hotend temp should never be below min_hotend_temp
+    pub min_hotend_temp: i32,
+    /// Hotend temp should never be above max_hotend_temp
+    pub max_hotend_temp: i32,
+    /// The maximum x coordinate printable
+    pub size_x: f32,
+    /// The maximum y coordinate printable
+    pub size_y: f32,
+    /// The maximum z coordinate printable
+    pub size_z: f32,
 }
 
 impl Profile {
-    fn new() -> Profile {
+    fn ender3v2() -> Profile {
         Profile {
             nozzle_diameter: 0.4,
             filament_diameter: 1.75,
             layer_height: 0.2,
+            min_hotend_temp: 200,
+            max_hotend_temp: 220,
+            size_x: 220.0,
+            size_y: 220.0,
+            size_z: 250.0,
         }
     }
 
@@ -80,7 +95,7 @@ pub struct Printer {
 impl Default for Printer {
     fn default() -> Self {
         let state = State::new();
-        let profile = Profile::new();
+        let profile = Profile::ender3v2();
         Self::new(state, profile)
     }
 }
@@ -150,13 +165,47 @@ impl Printer {
         }
     }
 
+    /// Check if the current state of things is still in safe limits
+    pub fn is_safe(&self) {
+        if self.state.x < 0.0 || self.state.x > self.profile.size_x {
+            // X is not in bounds
+            panic!("X is not in bounds");
+        }
+        if self.state.y < 0.0 || self.state.y > self.profile.size_y {
+            // Y is not in bounds
+            panic!("Y is not in bounds");
+        }
+        if self.state.z < self.profile.layer_height || self.state.z > self.profile.size_z {
+            // Z is not in bounds
+            panic!("Z is not in bounds");
+        }
+        if self.state.hotend_temperature > self.profile.max_hotend_temp {
+            // hotend is too hot
+            panic!("Hotend temp too hot");
+        }
+    }
+
+    /// Make sure hotend is warm enough for an extrusion to work
+    pub fn is_safe_to_extrude(&self) {
+        if self.state.hotend_temperature < self.profile.min_hotend_temp {
+            // The temp is too low to extrude
+            panic!("Not safe to extrude");
+        }
+    }
+
     /// Prepare for printing by auto-homing, setting temp, and drawing test line to get filament ready
     pub fn prepare(&mut self) {
         self.commands.push(Command {
             gcode: Gcode::G28,
             comment: "Auto-home".into(),
         });
+        self.state.x = 0.0;
+        self.state.y = 0.0;
+        self.state.z = 0.0;
         self.move_without_extrusion(0.0, 0.0, self.profile.layer_height);
+        if !self.danger_mode {
+            self.is_safe();
+        }
         // we're moving 200 units up, then 200 back
         self.extrude_line(self.state.x, self.state.y + 200.0, self.state.z);
         self.extrude_line(
@@ -169,6 +218,10 @@ impl Printer {
 
     /// When done, retract filament a bit, move up and away from print, set temps back to 0 and fan to 0
     pub fn finish(&mut self) {
+        if !self.danger_mode {
+            self.is_safe();
+            self.is_safe_to_extrude();
+        }
         self.retract(5.0);
         self.set_bed_temp_no_wait(0);
         self.set_hotend_temp_no_wait(0);
@@ -215,6 +268,10 @@ impl Printer {
 
     /// Stay in place but retract the filament a bit to avoid oozing
     pub fn retract(&mut self, amount: f32) {
+        if !self.danger_mode {
+            self.is_safe();
+            self.is_safe_to_extrude();
+        }
         self.commands.push(Command {
             gcode: Gcode::G1(
                 self.state.e - amount,
@@ -235,6 +292,9 @@ impl Printer {
             comment: "Set bed temp and wait".into(),
         });
         self.state.bed_temperature = temp;
+        if !self.danger_mode {
+            self.is_safe();
+        }
     }
 
     /// Set the bed temperature and continue immediately without waiting for temp to be reached
@@ -244,6 +304,9 @@ impl Printer {
             comment: "Set bed temp and do not wait".into(),
         });
         self.state.bed_temperature = temp;
+        if !self.danger_mode {
+            self.is_safe();
+        }
     }
 
     /// Set the hotend temperature and wait for temp to be reached
@@ -253,6 +316,9 @@ impl Printer {
             comment: "Set hotend temp and wait".into(),
         });
         self.state.hotend_temperature = temp;
+        if !self.danger_mode {
+            self.is_safe();
+        }
     }
 
     /// Set the hotend temperature and continue immediately without waiting for temp to be reached
@@ -262,6 +328,9 @@ impl Printer {
             comment: "Set hotend temp and do not wait".into(),
         });
         self.state.hotend_temperature = temp;
+        if !self.danger_mode {
+            self.is_safe();
+        }
     }
 
     /// Set the fan duty cycle from 0-255
@@ -271,6 +340,9 @@ impl Printer {
             comment: "Set fan speed in 0-255 range".into(),
         });
         self.state.fan = speed;
+        if !self.danger_mode {
+            self.is_safe();
+        }
     }
 
     /// Add autohome command and move coordonates to (0,0,0)
@@ -282,6 +354,9 @@ impl Printer {
         self.state.x = 0.0;
         self.state.y = 0.0;
         self.state.z = 0.0;
+        if !self.danger_mode {
+            self.is_safe();
+        }
     }
 
     /// Move in line from current (x,y) to new (x,y), printing a line as you go
@@ -309,6 +384,10 @@ impl Printer {
         self.state.y = dest_y;
         self.state.z = dest_z;
         self.state.e += extrude_amount;
+        if !self.danger_mode {
+            self.is_safe();
+            self.is_safe_to_extrude();
+        }
     }
 
     /// Similar to extrude_line, but pretend current hotend location is (0,0,0) and draw line relative to that
@@ -333,6 +412,9 @@ impl Printer {
         self.state.x = dest_x;
         self.state.y = dest_y;
         self.state.z = dest_z;
+        if !self.danger_mode {
+            self.is_safe();
+        }
     }
 
     pub fn commands_str(&self) -> String {
@@ -353,11 +435,7 @@ mod tests {
 
     #[test]
     fn extruder_ratio() {
-        let profile = Profile {
-            filament_diameter: 1.75,
-            nozzle_diameter: 0.4,
-            layer_height: 0.2,
-        };
+        let profile = Profile::ender3v2();
         debug_assert!(profile.extruder_ratio() < 0.053);
         debug_assert!(profile.extruder_ratio() > 0.052);
     }
@@ -371,5 +449,13 @@ mod tests {
         println!("{}", str);
         let expected = include_str!("expected_default.gcode");
         debug_assert_eq!(str.trim(), expected.trim());
+    }
+
+    #[test]
+    #[should_panic]
+    fn try_to_go_out_of_bounds_panics() {
+        let mut printer = Printer::default();
+        printer.prepare();
+        printer.extrude_line_relative(0.0, 0.0, 260.0);
     }
 }
