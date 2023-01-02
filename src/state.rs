@@ -48,6 +48,8 @@ pub struct Profile {
     nozzle_diameter: f32,
     /// Diameter of filament in mm
     filament_diameter: f32,
+    /// Step height for each layer
+    layer_height: f32,
 }
 
 impl Profile {
@@ -55,6 +57,7 @@ impl Profile {
         Profile {
             nozzle_diameter: 0.4,
             filament_diameter: 1.75,
+            layer_height: 0.2,
         }
     }
 
@@ -153,6 +156,7 @@ impl Printer {
             gcode: Gcode::G28,
             comment: "Auto-home".into(),
         });
+        self.move_without_extrusion(0.0, 0.0, self.profile.layer_height);
         // we're moving 200 units up, then 200 back
         self.extrude_line(self.state.x, self.state.y + 200.0, self.state.z);
         self.extrude_line(
@@ -307,6 +311,7 @@ impl Printer {
         self.state.e += extrude_amount;
     }
 
+    /// Similar to extrude_line, but pretend current hotend location is (0,0,0) and draw line relative to that
     pub fn extrude_line_relative(&mut self, dest_x: f32, dest_y: f32, dest_z: f32) {
         self.extrude_line(
             self.state.x + dest_x,
@@ -321,7 +326,7 @@ impl Printer {
         }
 
         self.commands.push(Command {
-            gcode: Gcode::G1(self.state.e, self.state.f, dest_x, dest_y, dest_z),
+            gcode: Gcode::G0(self.state.e, self.state.f, dest_x, dest_y, dest_z),
             comment: "Move to (x,y,z) without extruding".into(),
         });
 
@@ -351,6 +356,7 @@ mod tests {
         let profile = Profile {
             filament_diameter: 1.75,
             nozzle_diameter: 0.4,
+            layer_height: 0.2,
         };
         debug_assert!(profile.extruder_ratio() < 0.053);
         debug_assert!(profile.extruder_ratio() > 0.052);
@@ -362,6 +368,7 @@ mod tests {
         printer.prepare();
         printer.finish();
         let str = printer.commands_str();
+        println!("{}", str);
         let expected = include_str!("expected_default.gcode");
         debug_assert_eq!(str.trim(), expected.trim());
     }
