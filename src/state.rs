@@ -4,25 +4,25 @@ use crate::command::{Command, Gcode};
 
 pub struct State {
     /// `true` if absolute positioning mode is set, false if relative positioning mode is set
-    absolute_positioning_mode: bool,
+    pub absolute_positioning_mode: bool,
     /// `true` if extruder absolute positioning mode is set, false if extruder relative positioning mode is set
-    extruder_absolute_positioning_mode: bool,
+    pub extruder_absolute_positioning_mode: bool,
     /// Target bed temperature in C
-    bed_temperature: i32,
+    pub bed_temperature: i32,
     /// Hotend bed temperature in C
-    hotend_temperature: i32,
+    pub hotend_temperature: i32,
     /// Fan speed 0-255
-    fan: u8,
+    pub fan: u8,
     /// Hotend X coordinate
-    x: f32,
+    pub x: f32,
     /// Hotend Y coordinate
-    y: f32,
+    pub y: f32,
     /// Hotend Z coordinate
-    z: f32,
+    pub z: f32,
     /// Hotend E coordinate (i.e. distance extruded)
-    e: f32,
+    pub e: f32,
     /// Feed rate in mm/min
-    f: f32,
+    pub f: f32,
 }
 
 impl State {
@@ -86,10 +86,10 @@ impl Profile {
 }
 
 pub struct Printer {
-    state: State,
+    pub state: State,
     commands: Vec<Command>,
     danger_mode: bool,
-    profile: Profile,
+    pub profile: Profile,
 }
 
 impl Default for Printer {
@@ -283,6 +283,25 @@ impl Printer {
             comment: "retract filament".into(),
         });
         self.state.e -= amount;
+    }
+
+    /// Extrude without moving. Useful if previously retracted
+    pub fn extrude_in_place(&mut self, amount: f32) {
+        if !self.danger_mode {
+            self.is_safe();
+            self.is_safe_to_extrude();
+        }
+        self.commands.push(Command {
+            gcode: Gcode::G1(
+                self.state.e + amount,
+                self.state.f,
+                self.state.x,
+                self.state.y,
+                self.state.z,
+            ),
+            comment: "extrude filament".into(),
+        });
+        self.state.e += amount;
     }
 
     /// Set the bed temperature and wait for temp to be reached
