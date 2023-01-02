@@ -307,6 +307,14 @@ impl Printer {
         self.state.e += extrude_amount;
     }
 
+    pub fn extrude_line_relative(&mut self, dest_x: f32, dest_y: f32, dest_z: f32) {
+        self.extrude_line(
+            self.state.x + dest_x,
+            self.state.y + dest_y,
+            self.state.z + dest_z,
+        );
+    }
+
     pub fn move_without_extrusion(&mut self, dest_x: f32, dest_y: f32, dest_z: f32) {
         if !self.state.absolute_positioning_mode {
             panic!("Only absolute positioning mode is supported at the moment.");
