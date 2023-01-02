@@ -22,3 +22,13 @@ The main tasks you'll do:
   - set temperatures to 0
   - move up and away from print
   - shut down steppers
+
+## Examples
+
+In the `examples` folder are examples of how this can be used.
+
+### hilbert.rs
+
+`cargo run --example hilbert`
+
+the Hilbert example will draw a hilbert curve one layer tall and stop. It is an example of how to use code to specify relative moves and how the gcode_gen manages extrusion amounts and absolute coordinates, as well as how the prep work and finishing work are added to the list of commands.
