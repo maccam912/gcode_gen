@@ -40,8 +40,8 @@ pub enum Gcode {
 impl Display for Gcode {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Gcode::G0(e, f, x, y, z) => write!(fmt, "G0 E{e} f{f} X{x} Y{y} Z{z}"),
-            Gcode::G1(e, f, x, y, z) => write!(fmt, "G1 E{e} f{f} X{x} Y{y} Z{z}"),
+            Gcode::G0(e, f, x, y, z) => write!(fmt, "G0 E{e} F{f} X{x} Y{y} Z{z}"),
+            Gcode::G1(e, f, x, y, z) => write!(fmt, "G1 E{e} F{f} X{x} Y{y} Z{z}"),
             Gcode::G28 => write!(fmt, "G28"),
             Gcode::G90 => write!(fmt, "G90"),
             Gcode::G91 => write!(fmt, "G91"),
@@ -78,15 +78,15 @@ impl Display for Gcode {
                 }
                 write!(fmt, "{s}")
             }
-            Gcode::M82 => todo!(),
-            Gcode::M83 => todo!(),
-            Gcode::M104(_) => todo!(),
-            Gcode::M106(_) => todo!(),
-            Gcode::M107 => todo!(),
-            Gcode::M109(_) => todo!(),
-            Gcode::M112 => todo!(),
-            Gcode::M140(_) => todo!(),
-            Gcode::M190(_) => todo!(),
+            Gcode::M82 => write!(fmt, "M82"),
+            Gcode::M83 => write!(fmt, "M83"),
+            Gcode::M104(temp) => write!(fmt, "M104 S{temp}"),
+            Gcode::M106(power) => write!(fmt, "M106 S{power}"),
+            Gcode::M107 => write!(fmt, "M107"),
+            Gcode::M109(temp) => write!(fmt, "M109 S{temp}"),
+            Gcode::M112 => write!(fmt, "M112"),
+            Gcode::M140(temp) => write!(fmt, "M140 S{temp}"),
+            Gcode::M190(temp) => write!(fmt, "M190 S{temp}"),
         }
     }
 }
@@ -98,6 +98,6 @@ pub(crate) struct Command {
 
 impl Display for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} ; {}", self.gcode, self.comment)
+        writeln!(f, "{} ; {}", self.gcode, self.comment)
     }
 }
