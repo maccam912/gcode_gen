@@ -93,7 +93,7 @@ fn main() {
 
     p.move_without_extrusion(20.0, 200.0, 0.2);
     // Now draw the lines
-    hilbert(&mut p, 6, Dir::UP);
+    hilbert(&mut p, 3, Dir::UP);
 
     p.finish();
 

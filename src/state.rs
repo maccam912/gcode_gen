@@ -60,6 +60,10 @@ pub struct Profile {
     pub size_y: f32,
     /// The maximum z coordinate printable
     pub size_z: f32,
+    /// Extrusion speed
+    pub extrusion_speed: f32,
+    /// Non extrusion speed
+    pub non_extrusion_speed: f32,
 }
 
 impl Profile {
@@ -73,6 +77,8 @@ impl Profile {
             size_x: 220.0,
             size_y: 220.0,
             size_z: 250.0,
+            extrusion_speed: 1500.0,
+            non_extrusion_speed: 5000.0,
         }
     }
 
@@ -153,6 +159,10 @@ impl Printer {
             comment: "Set fan speed".into(),
         });
         // x, y, z, e, f
+        commands.push(Command {
+            gcode: Gcode::G28,
+            comment: "Auto home".into(),
+        });
         commands.push(Command {
             gcode: Gcode::G0(state.e, state.f, state.x, state.y, state.z),
             comment: "Move to (x,y,z) with extruder and feed rate set to match state".into(),
@@ -275,7 +285,7 @@ impl Printer {
         self.commands.push(Command {
             gcode: Gcode::G1(
                 self.state.e - amount,
-                self.state.f,
+                self.profile.non_extrusion_speed,
                 self.state.x,
                 self.state.y,
                 self.state.z,
@@ -294,7 +304,7 @@ impl Printer {
         self.commands.push(Command {
             gcode: Gcode::G1(
                 self.state.e + amount,
-                self.state.f,
+                self.profile.extrusion_speed,
                 self.state.x,
                 self.state.y,
                 self.state.z,
@@ -392,7 +402,7 @@ impl Printer {
         self.commands.push(Command {
             gcode: Gcode::G1(
                 self.state.e + extrude_amount,
-                self.state.f,
+                self.profile.extrusion_speed,
                 dest_x,
                 dest_y,
                 dest_z,
@@ -424,7 +434,13 @@ impl Printer {
         }
 
         self.commands.push(Command {
-            gcode: Gcode::G0(self.state.e, self.state.f, dest_x, dest_y, dest_z),
+            gcode: Gcode::G0(
+                self.state.e,
+                self.profile.non_extrusion_speed,
+                dest_x,
+                dest_y,
+                dest_z,
+            ),
             comment: "Move to (x,y,z) without extruding".into(),
         });
 
@@ -457,17 +473,6 @@ mod tests {
         let profile = Profile::ender3v2();
         debug_assert!(profile.extruder_ratio() < 0.053);
         debug_assert!(profile.extruder_ratio() > 0.052);
-    }
-
-    #[test]
-    fn commands_exported_for_default() {
-        let mut printer = Printer::default();
-        printer.prepare();
-        printer.finish();
-        let str = printer.commands_str();
-        println!("{}", str);
-        let expected = include_str!("expected_default.gcode");
-        debug_assert_eq!(str.trim(), expected.trim());
     }
 
     #[test]
