@@ -29,7 +29,7 @@ fn main() {
 
     p.profile.extrusion_speed = 50.0;
 
-    p.set_bed_temp(35);
+    p.set_bed_temp(45);
 
     let pattern_width = 1.5;
 
