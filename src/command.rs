@@ -13,6 +13,8 @@ pub enum Gcode {
     G90,
     /// G91: Set relative positioning mode
     G91,
+    /// M0(msec): Pause for number of milliseconds
+    M0(i32),
     /// M17(E, X, Y, Z): Enable steppers
     M17(bool, bool, bool, bool),
     /// M18(E, S, X, Y, Z): Disable steppers, after S idle timeout
@@ -45,6 +47,7 @@ impl Display for Gcode {
             Gcode::G28 => write!(fmt, "G28"),
             Gcode::G90 => write!(fmt, "G90"),
             Gcode::G91 => write!(fmt, "G91"),
+            Gcode::M0(msec) => write!(fmt, "M0 P{msec}"),
             Gcode::M17(e, x, y, z) => {
                 let mut s: String = "M17".into();
                 if *e {

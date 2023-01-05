@@ -452,6 +452,21 @@ impl Printer {
         }
     }
 
+    pub fn move_without_extrusion_relative(&mut self, dest_x: f32, dest_y: f32, dest_z: f32) {
+        self.move_without_extrusion(
+            self.state.x + dest_x,
+            self.state.y + dest_y,
+            self.state.z + dest_z,
+        );
+    }
+
+    pub fn wait(&mut self, msec: i32) {
+        self.commands.push(Command {
+            gcode: Gcode::M0(msec),
+            comment: "Pause".into(),
+        });
+    }
+
     pub fn commands_str(&self) -> String {
         let mut s = String::new();
 
