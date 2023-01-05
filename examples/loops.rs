@@ -1,5 +1,7 @@
 use gcode_gen::state::Printer;
 
+// The goal here is the loops side of some velcro type thing. The loops can't be too tall or close together or hotend will hit them.
+
 fn main() {
     let mut p = Printer::default();
     p.prepare();
@@ -29,6 +31,7 @@ fn main() {
 
     p.profile.extrusion_speed = 50.0;
 
+    // Cool down the bed, the idea here is that cooler ambient temp will mean less sagging of loops after printed
     p.set_bed_temp(45);
 
     let pattern_width = 1.5;
@@ -40,6 +43,7 @@ fn main() {
         p.move_without_extrusion(x, y, z);
         p.extrude_in_place(3.0);
         while p.state.y < 20.0 + height - pattern_width {
+            // Going in each column, extrude slowly upward at an angle, then back around and touch down to "glue" down the end of the loop. Do a column of these
             p.extrude_line_relative(-1.0, -1.0, 1.5);
             p.extrude_line_relative(1.0, 1.0, 1.5);
             p.profile.nozzle_diameter = 0.25;
