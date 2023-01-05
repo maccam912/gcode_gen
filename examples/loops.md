@@ -523,6 +523,7 @@ G1 E1353.3566 F3000 X120.00032 Y20 Z0.35 ; Extrude line from current location to
 G1 E1350.3566 F5000 X120.00032 Y20 Z0.35 ; retract filament
 G0 E1350.3566 F5000 X120.00032 Y20 Z0.5 ; Move to (x,y,z) without extruding
 G0 E1350.3566 F5000 X20 Y20 Z0.5 ; Move to (x,y,z) without extruding
+M190 S35 ; Set bed temp and wait
 G0 E1350.3566 F5000 X20 Y20 Z2.5 ; Move to (x,y,z) without extruding
 G0 E1350.3566 F5000 X20 Y20 Z0.5 ; Move to (x,y,z) without extruding
 G1 E1353.3566 F50 X20 Y20 Z0.5 ; extrude filament
